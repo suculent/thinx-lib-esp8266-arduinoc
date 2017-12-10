@@ -40,10 +40,6 @@ WiFiManagerParameter * THiNX::owner_param;
 
 void THiNX::saveConfigCallback() {
 
-#ifdef __DEBUG__
-  printStackHeap("safeConfigCallback");
-#endif
-
   Serial.println(F("* TH: WiFiManager's saveConfigCallback called. Counfiguration should be saved now!"));
   should_save_config = true;
   strcpy(thx_api_key, api_key_param->getValue());
@@ -245,10 +241,6 @@ void THiNX::connect_wifi() {
   return;
   #else
 
-#ifdef __DEBUG__
-  printStackHeap("connect_wifi");
-#endif
-
   if (connected) {
     return;
   }
@@ -441,7 +433,6 @@ void THiNX::senddata(String body) {
 void THiNX::parse(String payload) {
 
   // TODO: Should parse response only for this device_id (which must be internal and not a mac)
-  // printStackHeap("json-parser");
 
   payload_type ptype = Unknown;
 
@@ -485,7 +476,6 @@ void THiNX::parse(String payload) {
   String body = payload.substring(start_index, endIndex);
 
 #ifdef __DEBUG__
-  printStackHeap("parse");
   Serial.print(F("*TH: Parsing response:\n'"));
   Serial.print(body);
   Serial.println("'");
@@ -866,14 +856,7 @@ bool THiNX::start_mqtt() {
     return false;
   }
 
-  Serial.print(F("*TH: UDID: ")); Serial.println(thinx_udid);
-  Serial.print(F("*TH: Contacting MQTT server ")); Serial.println(thinx_mqtt_url);
-  Serial.print(F("*TH: MQTT client with URL ")); Serial.println(thinx_mqtt_url); Serial.flush();
-
   mqtt_client = new PubSubClient(thx_wifi_client, thinx_mqtt_url);
-
-  Serial.print(F(" started on port "));
-  Serial.println(thinx_mqtt_port);
 
   last_mqtt_reconnect = 0;
 
@@ -881,11 +864,6 @@ bool THiNX::start_mqtt() {
     Serial.println(F("*TH: API Key not set, exiting."));
     return false;
   }
-
-  Serial.print(F("*TH: AK: "));
-  Serial.println(thinx_api_key);
-  Serial.print(F("*TH: DCH: "));
-  Serial.println(thinx_mqtt_channel());
 
   const char* id = thinx_mac();
   const char* user = thinx_udid;
@@ -903,8 +881,6 @@ bool THiNX::start_mqtt() {
   .set_auth(user, pass)
   .set_keepalive(30)
 )) {
-
-  Serial.println(F("*TH: mqtt_client->connected()!"));
 
   mqtt_connected = true;
   performed_mqtt_checkin = true;
@@ -964,8 +940,6 @@ bool THiNX::start_mqtt() {
 */
 
 void THiNX::restore_device_info() {
-
-  Serial.println(F("*TH: Restoring device info..."));
 
   int json_end = 0;
 
@@ -1100,13 +1074,10 @@ void THiNX::save_device_info()
 {
   deviceInfo(); // update json_output
 
-  // disabled for it crashes when closing the file (LoadStoreAlignmentCause) when using String
   #ifdef __USE_SPIFFS__
   File f = SPIFFS.open("/thx.cfg", "w");
   if (f) {
-    Serial.println(F("*TH: saving configuration to SPIFFS..."));
-    f.println(String((char*)json_info)); // String instead of const char* due to LoadStoreAlignmentCause...
-    Serial.println(F("*TH: closing file..."));
+    f.println(String((char*)json_info));
     f.close();
     delay(1);
   }
@@ -1134,30 +1105,21 @@ void THiNX::deviceInfo() {
   JsonObject& root = jsonBuffer.createObject();
 
   // Mandatories
-
   if (strlen(thinx_owner) > 1) {
     root["owner"] = thinx_owner; // allow owner change
   }
-  Serial.print(F("*TH: thinx_owner: "));
-  Serial.println(thinx_owner);
 
   if (strlen(thinx_api_key) > 1) {
     root["apikey"] = thinx_api_key; // allow dynamic API Key
   }
-  Serial.print(F("*TH: thinx_api_key: "));
-  Serial.println(thinx_api_key);
 
   if (strlen(thinx_udid) > 1) {
     root["udid"] = thinx_udid; // allow setting UDID, skip 0
   }
-  Serial.print(F("*TH: thinx_udid: "));
-  Serial.println(thinx_udid);
 
   if (strlen(thinx_udid) > 1) {
     root["udid"] = thinx_udid; // allow setting UDID, skip 0
   }
-  Serial.print(F("*TH: thinx_udid: "));
-  Serial.println(thinx_udid);
 
   // Optionals
   if (strlen(available_update_url) > 1) {
@@ -1234,8 +1196,6 @@ void THiNX::update_and_reboot(String url) {
 
 void THiNX::import_build_time_constants() {
 
-  Serial.println(F("*TH: Importing build-time constants..."));
-
   // Only if not overridden by user
   if (strlen(thinx_api_key) < 4) {
     thinx_api_key = strdup(THINX_API_KEY);
@@ -1265,8 +1225,6 @@ void THiNX::import_build_time_constants() {
   thinx_firmware_version = strdup(THINX_FIRMWARE_VERSION);
   thinx_firmware_version_short = strdup(THINX_FIRMWARE_VERSION_SHORT);
   app_version = strdup(THINX_APP_VERSION);
-
-  Serial.println(F("*TH: Loaded build-time constants..."));
 }
 
 /*
@@ -1279,7 +1237,6 @@ bool THiNX::fsck() {
   bool flashCorrectlyConfigured = realSize.equals(ideSize);
   bool fileSystemReady = false;
   if(flashCorrectlyConfigured) {
-    Serial.println(F("* TH: Starting SPIFFS..."));
     fileSystemReady = SPIFFS.begin();
     if (!fileSystemReady) {
       Serial.println(F("* TH: Formatting SPIFFS..."));
@@ -1288,7 +1245,6 @@ bool THiNX::fsck() {
       ESP.restart();
       return false;
     }
-    Serial.println(F("* TH: SPIFFS Initialization completed."));
   }  else {
     Serial.print(F("*TH: Flash incorrectly configured, SPIFFS cannot start, IDE size: "));
     Serial.println(ideSize + ", real size: " + realSize);
@@ -1305,13 +1261,9 @@ void THiNX::evt_save_api_key() {
   if (should_save_config) {
     if (strlen(thx_api_key) > 4) {
       thinx_api_key = thx_api_key;
-      Serial.print(F("Saving thx_api_key from Captive Portal: "));
-      Serial.println(thinx_api_key);
     }
     if (strlen(thx_owner_key) > 4) {
       thinx_owner_key = thx_owner_key;
-      Serial.print(F("Saving thx_owner_key from Captive Portal: "));
-      Serial.println(thinx_owner_key);
     }
     save_device_info();
     should_save_config = false;
@@ -1405,13 +1357,8 @@ void THiNX::loop() {
   if (thinx_phase == CHECKIN_MQTT) {
     thinx_mqtt_channel(); // initialize channel variable
     if (strlen(mqtt_device_channel) > 5) {
-      Serial.println(F("*TH: MQTT Subscribing device channel from loop..."));
       if (mqtt_client->subscribe(mqtt_device_channel)) {
-        Serial.print(F("*TH: MQTT device topic: "));
-        Serial.print(mqtt_device_channel);
-        Serial.println(F(" successfully subscribed."));
-        Serial.println(F("*TH: Publishing device status over MQTT... "));
-        // Publish status on status channel
+        Serial.println(F("*TH: MQTT: Publishing device status... "));
         mqtt_client->publish(
           mqtt_device_status_channel,
           F("{ \"status\" : \"connected\" }")
@@ -1451,7 +1398,6 @@ void THiNX::loop() {
   }
 
   if ( thinx_phase == FINALIZE ) {
-    Serial.println(F("*TH: Calling finalize()... "));
     finalize();
   }
 
