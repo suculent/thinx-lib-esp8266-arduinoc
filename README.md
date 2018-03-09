@@ -6,8 +6,8 @@ An Arduino/ESP8266 library to wrap client for OTA updates and RTM (Remote Things
 
 # What's New
 
-* Added example that combines THiNX with any other UART device (SigFox) for outage reporting with battery backup
-* Added possibility to set own status string on check-in
+* Added support for fetching timestamp using epoch() after first checkin
+* Added time() and date() string functions with customizable formatting
 
 # Usage
 
@@ -77,6 +77,8 @@ void loop()
 5. On successful checkin, incoming data incl. UDID (unique device identifier) and Owner ID is stored to EEPROM or SPIFFS for further use after reboot.
 
 6. Configuration Push can be used to inject custom Environment Variables over the network, without need to have them stored anywhere in the code on the device (e.g. WiFi credentials)
+
+7. You can set `thx.thinx_mqtt_url` after initialization in setup() to DNS/IP address of your own broker 
 
 
 ### Finalize callback

@@ -9,14 +9,14 @@
 
 // Provides placeholder for THINX_FIRMWARE_VERSION_SHORT
 #ifndef VERSION
-#define VERSION "2.1.165"
+#define VERSION "2.1.166"
 #endif
 
 #ifndef THX_REVISION
 #ifdef THINX_FIRMWARE_VERSION_SHORT
 #define THX_REVISION THINX_FIRMWARE_VERSION_SHORT
 #else
-#define THX_REVISION "165"
+#define THX_REVISION "166"
 #endif
 #endif
 
@@ -133,11 +133,15 @@ public:
     void publish(String, String, bool);       // send String to any channel, optinally with retain
 
     void setStatus(String);
-    void setCheckinInterval(long interval);
-    void setRebootInterval(long interval);
+    void setCheckinInterval(long);
+    void setRebootInterval(long);
 
-    unsigned long epoch();                    // estimated timestamp since last checkin as
-    String time();                            // estimated current Time
+    static const char time_format[];
+    static const char date_format[];
+
+    long epoch();                    // estimated timestamp since last checkin as
+    String time(const char*);                            // estimated current Time
+    String date(const char*);                            // estimated current Date
 
 private:
 

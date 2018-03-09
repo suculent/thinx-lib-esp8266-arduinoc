@@ -2,6 +2,8 @@ extern "C" {
   #include "user_interface.h"
   #include "thinx.h"
   #include <cont.h>
+  #include <time.h>
+  #include <stdlib.h>
   extern cont_t g_cont;
 }
 
@@ -19,6 +21,9 @@ extern "C" {
 
 char* THiNX::thinx_api_key;
 char* THiNX::thinx_owner_key;
+
+const char THiNX::time_format[] = "%T";
+const char THiNX::date_format[] = "%Y-%M-%d";
 
 #ifdef __USE_WIFI_MANAGER__
 char THiNX::thx_api_key[65] = {0};
@@ -111,6 +116,7 @@ THiNX::THiNX(const char * __apikey, const char * __owner_id) {
   thinx_version_id = strdup("");
   thinx_api_key = strdup("");
   thinx_forced_update = false;
+  last_checkin_timestamp = 0; // 1/1/1970
 
   checkin_interval = millis() + checkin_timeout / 4; // retry faster before first checkin
   reboot_interval = millis() + reboot_timeout;
@@ -676,7 +682,6 @@ void THiNX::parse(String payload) {
           Serial.println("Updating time...");
           last_checkin_timestamp = (long)registration[F("timestamp")];
           last_checkin_millis = millis();
-          //setTime(last_checkin_timestamp); TODO: FIXME:requires Time.h somehow...
         }
 
         save_device_info();
@@ -785,21 +790,68 @@ String THiNX::thinx_mqtt_status_channel() {
   return String(mqtt_device_status_channel);
 }
 
-unsigned long THiNX::epoch() {
-  unsigned long since_last_checkin = (millis() - last_checkin_millis) / 1000;
+long THiNX::epoch() {
+  long since_last_checkin = (millis() - last_checkin_millis) / 1000;
   return last_checkin_timestamp + since_last_checkin;
 }
 
-String THiNX::time() {
-  unsigned long stamp = THiNX::epoch();
+String THiNX::time(const char* optional_format) {
+
+  /*
+  char *format = (const char *)time_format;
+
+  if (optional_format != NULL) {
+    format = optional_format;
+  }
+  */
+
+  long stamp = THiNX::epoch();
+  struct tm lt;
+  char res[32];
+  (void) localtime_r(&stamp, &lt);
+  if (strftime(res, sizeof(res), time_format, &lt) == 0) {
+      Serial.println(F("cannot format supplied time into buffer"));
+  }
+  return String(res);
+
+    /* deprecated
+    unsigned long stamp = THiNX::epoch();
+    unsigned long time_unix = stamp + 3600;
     String time_representation = String((time_unix % 86400L) / 3600);
     time_representation += ":";
+    // leading minute zero
     if ( ((time_unix % 3600) / 60) < 10 ) {
-        // In the first 10 minutes of each hour, we'll want a leading '0'
         time_representation += "0";
     }
     time_representation += String((time_unix % 3600) / 60);
+    time_representation += ":";
+    // leading second zero
+    if ( ((time_unix % 3600) % 60) < 10 ) {
+        time_representation += "0";
+    }
+    time_representation += String((time_unix % 3600) % 60);
     return String(time_representation);
+    */
+}
+
+String THiNX::date(const char* optional_format) {
+
+  /*
+  char *format = (const char *) date_format;
+
+  if (optional_format != NULL) {
+    format = (const char *)optional_format;
+  }*/
+
+  long stamp = THiNX::epoch();
+
+  struct tm lt;
+  char res[32];
+  (void) localtime_r(&stamp, &lt);
+  if (strftime(res, sizeof(res), date_format, &lt) == 0) {
+      Serial.println(F("cannot format supplied date into buffer"));
+  }
+  return String(res);
 }
 
 /*
