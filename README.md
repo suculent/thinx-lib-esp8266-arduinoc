@@ -6,8 +6,9 @@ An Arduino/ESP8266 library to wrap client for OTA updates and RTM (Remote Things
 
 # What's New
 
-* Added support for fetching timestamp using epoch() after first checkin
-* Added time() and date() string functions with customizable formatting
+* Added setCheckinInterval(long) and setRebootInterval(long) to allow heartbeat and timed restarts (defaults to 24h)
+* Added example that combines THiNX with any other UART device (SigFox) for outage reporting with battery backup
+* Added possibility to set own status string on check-in
 
 # Usage
 
