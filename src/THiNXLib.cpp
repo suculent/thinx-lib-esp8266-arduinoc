@@ -814,83 +814,74 @@ long THiNX::epoch() {
 }
 
 String THiNX::time(const char* optional_format) {
-
-  /*
-  char *format = (const char *)time_format;
-
-  if (optional_format != NULL) {
-    format = optional_format;
-  }
-  */
-
-  long stamp = THiNX::epoch();
-  struct tm lt;
-  char res[32];
-  (void) localtime_r(&stamp, &lt);
-  if (strftime(res, sizeof(res), time_format, &lt) == 0) {
-      Serial.println(F("cannot format supplied time into buffer"));
-  }
-  return String(res);
-
+    
+    /*
+     char *format = (const char *)time_format;
+     
+     if (optional_format != NULL) {
+     format = optional_format;
+     }
+     */
+    
+    long stamp = THiNX::epoch();
+    struct tm lt;
+    char res[32];
+    (void) localtime_r(&stamp, &lt);
+    if (strftime(res, sizeof(res), time_format, &lt) == 0) {
+        Serial.println(F("cannot format supplied time into buffer"));
+    }
+    return String(res);
+    
     /* deprecated
-    unsigned long stamp = THiNX::epoch();
-    unsigned long time_unix = stamp + 3600;
-    String time_representation = String((time_unix % 86400L) / 3600);
-    time_representation += ":";
-    // leading minute zero
-    if ( ((time_unix % 3600) / 60) < 10 ) {
-        time_representation += "0";
-    }
-    time_representation += String((time_unix % 3600) / 60);
-    time_representation += ":";
-    // leading second zero
-    if ( ((time_unix % 3600) % 60) < 10 ) {
-        time_representation += "0";
-    }
-    time_representation += String((time_unix % 3600) % 60);
-    return String(time_representation);
-    */
+     unsigned long stamp = THiNX::epoch();
+     unsigned long time_unix = stamp + 3600;
+     String time_representation = String((time_unix % 86400L) / 3600);
+     time_representation += ":";
+     // leading minute zero
+     if ( ((time_unix % 3600) / 60) < 10 ) {
+     time_representation += "0";
+     }
+     time_representation += String((time_unix % 3600) / 60);
+     time_representation += ":";
+     // leading second zero
+     if ( ((time_unix % 3600) % 60) < 10 ) {
+     time_representation += "0";
+     }
+     time_representation += String((time_unix % 3600) % 60);
+     return String(time_representation);
+     */
 }
 
 String THiNX::date(const char* optional_format) {
-
-  /*
-  char *format = (const char *) date_format;
-
-  if (optional_format != NULL) {
-    format = (const char *)optional_format;
-  }*/
-
-  long stamp = THiNX::epoch();
-
-  struct tm lt;
-  char res[32];
-  (void) localtime_r(&stamp, &lt);
-  if (strftime(res, sizeof(res), date_format, &lt) == 0) {
-      Serial.println(F("cannot format supplied date into buffer"));
-  }
-  return String(res);
+    
+    /*
+     char *format = (const char *) date_format;
+     
+     if (optional_format != NULL) {
+     format = (const char *)optional_format;
+     }*/
+    
+    long stamp = THiNX::epoch();
+    
+    struct tm lt;
+    char res[32];
+    (void) localtime_r(&stamp, &lt);
+    if (strftime(res, sizeof(res), date_format, &lt) == 0) {
+        Serial.println(F("cannot format supplied date into buffer"));
+    }
+    return String(res);
 }
 
 /*
 * Device MAC address
 */
 
-// TODO: FIXME: Return real mac address through WiFi? Might solve compatibility issues.
 const char * THiNX::thinx_mac() {
-  //byte mac[] = {
-  //   0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-  //};
-  //WiFi.macAddress(mac);
-  sprintf(mac_string, "5CCF7F%6X", ESP.getChipId()); // ESP8266 only!
-  /*
-  #ifdef __ESP32__
-  sprintf(mac_string, "5CCF7C%6X", ESP.getChipId()); // ESP8266 only!
-  #endif
-  #ifdef __ESP8266__
-  sprintf(mac_string, "5CCF7F%6X", ESP.getChipId()); // ESP8266 only!
-  #endif
-  */
+#if defined(ESP8266)
+  sprintf(mac_string, "5CCF7F%6X", ESP.getChipId());
+#else
+  sprintf(mac_string, "5CCF7F%6X", ESP.getEfuseMac());
+#endif
   return mac_string;
 }
 
