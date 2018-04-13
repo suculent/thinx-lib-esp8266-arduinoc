@@ -6,10 +6,9 @@ An Arduino/ESP8266 library to wrap client for OTA updates and RTM (Remote Things
 
 # What's New
 
+* Added setCheckinInterval(long) and setRebootInterval(long) to allow heartbeat and timed restarts (defaults to 24h)
 * Added example that combines THiNX with any other UART device (SigFox) for outage reporting with battery backup
 * Added possibility to set own status string on check-in
-
-See changelog at the end for rest.
 
 # Usage
 
@@ -80,6 +79,8 @@ void loop()
 
 6. Configuration Push can be used to inject custom Environment Variables over the network, without need to have them stored anywhere in the code on the device (e.g. WiFi credentials)
 
+7. You can set `thx.thinx_mqtt_url` after initialization in setup() to DNS/IP address of your own broker 
+
 
 ### Finalize callback
 
@@ -135,8 +136,5 @@ void pushConfigCallback (String config) {
 ### Location Support
 
 You can update your device's location aquired by WiFi library or GPS module using `thx.setLocation(double lat, double lon`) from version 2.0.103 (rev88).
+
 Device will be forced to checked in when you change those values.
-
-# Changelog
-
-4/11/2017 - 2.0.123 - added pushConfigCallback, public MQTT methods publishStatus(message) and publish(message, topic, retain), WiFi migration example; added support for finding and using thinx-connect proxy using MDNS
