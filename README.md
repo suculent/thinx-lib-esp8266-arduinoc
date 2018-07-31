@@ -6,9 +6,11 @@ An Arduino/ESP8266 library to wrap client for OTA updates and RTM (Remote Things
 
 # What's New
 
+* Added Relay example with twin WiFi access variants.
+* Fixes and improved support for timezones. You can set timezone per device on the [RTM Console](https://rtm.thinx.cloud) and current DST will be applied on checkin, if applicable. It will be also used for the SNTP later.
+* HTTPS can be optionally disabled for faster checkins with `THiNX:forceHTTP = true` (speeds up checkin from 120 seconds to 2 seconds)
+* SHA-256 and MD5 firmware validation; currently the MD5 only is supported by ESPhttpUpdate (we're working with Arduino Core team on better implementation)
 * Added setCheckinInterval(long) and setRebootInterval(long) to allow heartbeat and timed restarts (defaults to 24h)
-* Added example that combines THiNX with any other UART device (SigFox) for outage reporting with battery backup
-* Added possibility to set own status string on check-in
 
 # Usage
 
@@ -78,8 +80,6 @@ void loop()
 5. On successful checkin, incoming data incl. UDID (unique device identifier) and Owner ID is stored to EEPROM or SPIFFS for further use after reboot.
 
 6. Configuration Push can be used to inject custom Environment Variables over the network, without need to have them stored anywhere in the code on the device (e.g. WiFi credentials)
-
-7. You can set `thx.thinx_mqtt_url` after initialization in setup() to DNS/IP address of your own broker 
 
 
 ### Finalize callback

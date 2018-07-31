@@ -9,14 +9,14 @@
 
 // Provides placeholder for THINX_FIRMWARE_VERSION_SHORT
 #ifndef VERSION
-#define VERSION "2.1.172"
+#define VERSION "2.3.184"
 #endif
 
 #ifndef THX_REVISION
 #ifdef THINX_FIRMWARE_VERSION_SHORT
 #define THX_REVISION THINX_FIRMWARE_VERSION_SHORT
 #else
-#define THX_REVISION "170"
+#define THX_REVISION "184"
 #endif
 #endif
 
@@ -27,6 +27,8 @@
 #endif
 
 #include <stdio.h>
+#include <time.h>
+
 #include <FS.h>
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
@@ -34,20 +36,30 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
 
+#include <WiFiClientSecure.h>
+
 #include <ArduinoJson.h>
 
 // Using better than Arduino-bundled version of MQTT https://github.com/Imroy/pubsubclient
 #include <PubSubClient.h>
 
+#include "sha256.h"
+
 class THiNX {
 
 public:
 
+  // Root certificate used by thinx.cloud
+    static unsigned char thx_ca_cert[];
+    static unsigned int thx_ca_cert_len;
+
+    static bool forceHTTP;                        // set to true for disabling HTTPS
     static double latitude;
     static double longitude;
     static String statusString;
     static String accessPointName;
     static String accessPointPassword;
+    static String lastWill;
 
 #ifdef __USE_WIFI_MANAGER__
     static WiFiManagerParameter *api_key_param;
@@ -82,7 +94,7 @@ public:
     phase thinx_phase;
 
     // Public API
-    void initWithAPIKey(const char *);
+    void init_with_api_key(const char *);
     void loop();
 
     String checkin_body();                  // TODO: Refactor to C-string
@@ -121,27 +133,37 @@ public:
     void setPushConfigCallback( void (*func)(String) );
     void setFinalizeCallback( void (*func)(void) );
     void setMQTTCallback( void (*func)(String) );
+    void setLastWill(String nextWill);        // disconnect MQTT and reconnect with different lastWill than default
 
     int wifi_connection_in_progress;
 
-    // Location Support
-    void setLocation(double,double);
-
     // MQTT Support
-    void publishStatus(String);               // send String to status channel
-    void publishStatusUnretained(String);     // send String to status channel (unretained)
-    void publishStatusRetain(String, bool);   // send String to status channel (optionally retained)
-    void publish(String, String, bool);       // send String to any channel, optinally with retain
 
-    void setStatus(String);
+    // publish to device status topic only
+    void publishStatus(String);               // DEPRECATED, send String to status topic
+    void publishStatusUnretained(String);     // DEPRECATED, send String to status topic (unretained)
+    void publishStatusRetain(String, bool);   // DEPRECATED, send String to status topic (optionally retained)
+    void publish_status(char *message, bool retain);  // send string to status topic, set retain
+    void publish_status_unretained(char *);   // send string to status topic, unretained
+
+    // publish to specified topic
+    void publish(String, String, bool);       // send String to any channel, optinally with retain
+    void publish(char * message, char * topic, bool retain);
+
     static const char time_format[];
     static const char date_format[];
 
     long epoch();                    // estimated timestamp since last checkin as
-    String time(const char*);                            // estimated current Time
-    String date(const char*);                            // estimated current Date
+    String thinx_time(const char*);                            // estimated current Time
+    String thinx_date(const char*);                            // estimated current Date
     void setCheckinInterval(long interval);
     void setRebootInterval(long interval);
+
+    // checkins
+    void checkin();                         // happens on registration
+    void setDashboardStatus(String);        // performs checkin while updating Status on Dashboard
+    void setStatus(String);                 // deprecated 2.2 (3)
+    void setLocation(double,double);        // performs checkin while updating Location
 
 private:
 
@@ -158,7 +180,7 @@ private:
     //
 
 #ifdef THX_REVISION
-    const char* thx_revision = strdup(String(THX_REVISION).c_str());
+    const char* thx_revision = strdup(THX_REVISION);
 #else
     const char* thx_revision = "0";
 #endif
@@ -177,6 +199,7 @@ private:
 
     // WiFi Manager
     WiFiClient thx_wifi_client;
+    WiFiClientSecure https_client;
     int status;                             // global WiFi status
     bool once;                              // once token for initialization
 
@@ -195,26 +218,26 @@ private:
     bool fsck();                            // check filesystem if using SPIFFS
     void connect();                         // start the connect loop
     void connect_wifi();                    // start connecting
-    void checkin();                         // checkin when connected
-    void senddata(String);
+
+    void senddata(String);                  // HTTP, will deprecate?
+    void send_data(String);                  // HTTP, will deprecate?
     void parse(String);
     void update_and_reboot(String);
 
-    long checkin_timeout;          // next timeout millis()
-    long checkin_interval = 3600 * 1000;  // can be set externaly, defaults to 1h
+    int timezone_offset = 2;
+    unsigned long checkin_timeout = 3600 * 1000;          // next timeout millis()
+    unsigned long checkin_interval = 3600 * 1000;  // can be set externaly, defaults to 1h
 
-    long last_checkin_millis;
-    long last_checkin_timestamp;
+    unsigned long last_checkin_millis;
+    unsigned long last_checkin_timestamp;
 
-    long reboot_timeout;          // next timeout millis()
-    long reboot_interval = 86400 * 1000;  // can be set externaly, defaults to 24h
+    unsigned long reboot_timeout = 86400 * 1000;          // next timeout millis()
+    unsigned long reboot_interval = 86400 * 1000;  // can be set externaly, defaults to 24h
 
     // MQTT
     bool start_mqtt();                      // connect to broker and subscribe
-    int mqtt_result;                       // success or failure on connection
     int mqtt_connected;                    // success or failure on subscription
     String mqtt_payload;                    // mqtt_payload store for parsing
-    int last_mqtt_reconnect;                // interval
     int performed_mqtt_checkin;              // one-time flag
     int all_done;                              // finalize flag
 
@@ -245,4 +268,15 @@ private:
     unsigned long wifi_wait_timeout;
     int wifi_retry;
     uint8_t wifi_status;
+
+    // SHA256
+    bool check_hash(char * filename, char * expected);
+    char * expected_hash;
+    char * expected_md5;
+
+    // SSL/TLS
+    void sync_sntp();                     // Synchronize time using SNTP instead of THiNX
+
+    // debug
+    void printStackHeap(String);
 };
