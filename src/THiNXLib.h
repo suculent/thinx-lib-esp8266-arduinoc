@@ -1,24 +1,26 @@
 #include <Arduino.h>
 
-#define __DEBUG__ // enables stack/heap debugging
-#define __DEBUG_JSON__ // enables API request debugging
-
+// #define __DEBUG__ // enables stack/heap debugging
 #define __ENABLE_WIFI_MIGRATION__ // enable automatic WiFi disconnect/reconnect on Configuration Push (THINX_ENV_SSID and THINX_ENV_PASS)
-#define __USE_WIFI_MANAGER__ // if disabled, you need to `WiFi.begin(ssid, pass)` on your own
+// #define __USE_WIFI_MANAGER__ // if disabled, you need to `WiFi.begin(ssid, pass)` on your own; saves about 3% of sketch space, excludes DNSServer and WebServer
 #define __USE_SPIFFS__ // if disabled, uses EEPROM instead
+#define __DISABLE_PROXY__ // skips using Proxy until required (security measure)
 
 // Provides placeholder for THINX_FIRMWARE_VERSION_SHORT
 #ifndef VERSION
-#define VERSION "2.3.184"
+#define VERSION "2.4.190"
 #endif
 
 #ifndef THX_REVISION
 #ifdef THINX_FIRMWARE_VERSION_SHORT
 #define THX_REVISION THINX_FIRMWARE_VERSION_SHORT
 #else
-#define THX_REVISION "184"
+#define THX_REVISION "190"
 #endif
 #endif
+
+//#define MQTT_DISABLED
+#define __DISABLE_MQTT__
 
 #ifdef __USE_WIFI_MANAGER__
 #include <DNSServer.h>
@@ -69,8 +71,8 @@ public:
 #endif
 
     THiNX();
-    THiNX(const char *, const char *); // (const char * __apikey, const char * __owner_id)
-    THiNX(const char *);  // (const char * __apikey)
+    THiNX(const char * __apikey, const char * __owner_id);
+    THiNX(const char * __apikey);
 
     enum payload_type {
         Unknown = 0,
@@ -100,7 +102,7 @@ public:
     String checkin_body();                  // TODO: Refactor to C-string
 
     // MQTT
-    PubSubClient *mqtt_client = NULL;
+    PubSubClient * mqtt_client = nullptr;
     char mqtt_device_channel[128];
     char mqtt_device_channels[128];
     char mqtt_device_status_channel[128];
@@ -153,7 +155,7 @@ public:
     static const char time_format[];
     static const char date_format[];
 
-    long epoch();                    // estimated timestamp since last checkin as
+    unsigned long epoch();                    // estimated timestamp since last checkin as
     String thinx_time(const char*);                            // estimated current Time
     String thinx_date(const char*);                            // estimated current Date
     void setCheckinInterval(long interval);
@@ -220,13 +222,14 @@ private:
     void connect_wifi();                    // start connecting
 
     void senddata(String);                  // HTTP, will deprecate?
-    void send_data(String);                  // HTTP, will deprecate?
-    void parse(String);
+    void send_data(String);                 // HTTPS
+    void fetch_data();                      // fetch and parse; max return char[] later
+    void parse(String);                     // needs to be refactored to char[] from String
     void update_and_reboot(String);
 
-    int timezone_offset = 2;
-    unsigned long checkin_timeout = 3600 * 1000;          // next timeout millis()
-    unsigned long checkin_interval = 3600 * 1000;  // can be set externaly, defaults to 1h
+    int timezone_offset = 1; // should use simpleDSTadjust
+    unsigned long checkin_interval = 86400 * 1000;          // next timeout millis()
+    unsigned long checkin_time = 0;  // can be set externaly, defaults to 1h
 
     unsigned long last_checkin_millis;
     unsigned long last_checkin_timestamp;
@@ -248,7 +251,6 @@ private:
     void import_build_time_constants();     // sets variables from thinx.h file
     void save_device_info();                // saves variables to SPIFFS or EEPROM
     void restore_device_info();             // reads variables from SPIFFS or EEPROM
-    void deviceInfo();                    // TODO: Refactor to C-string
 
     // Updates
     void notify_on_successful_update();     // send a MQTT notification back to Web UI
@@ -278,5 +280,7 @@ private:
     void sync_sntp();                     // Synchronize time using SNTP instead of THiNX
 
     // debug
+#ifdef __DEBUG__
     void printStackHeap(String);
+#endif
 };
