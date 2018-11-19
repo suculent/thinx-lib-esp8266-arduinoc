@@ -27,6 +27,7 @@ bool THiNX::forceHTTP = false;
 
 const char THiNX::time_format[] = "%T";
 const char THiNX::date_format[] = "%Y-%m-%d";
+char * THiNX::thinx_mqtt_url = strdup(THINX_MQTT_URL);
 
 #include "thinx_root_ca.h"
 
@@ -1311,7 +1312,7 @@ void THiNX::restore_device_info() {
     }
 
     #ifdef __USE_SPIFFS__
-    Serial.print(F("*TH: Closing SPIFFS file."));
+    Serial.println(F("*TH: Closing SPIFFS file."));
     f.close();
     #else
     #endif
@@ -1540,6 +1541,11 @@ void THiNX::setFinalizeCallback( void (*func)(void) ) {
 
 void THiNX::setMQTTCallback( void (*func)(String) ) {
     _mqtt_callback = func;
+}
+
+void THiNX::setMQTTBroker(char * url, int port) {
+    thinx_mqtt_url = url;
+    Serial.println("Port is ignored, defaults to 1883");
 }
 
 void THiNX::finalize() {

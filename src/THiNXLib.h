@@ -8,14 +8,14 @@
 
 // Provides placeholder for THINX_FIRMWARE_VERSION_SHORT
 #ifndef VERSION
-#define VERSION "2.4.190"
+#define VERSION "2.4.192"
 #endif
 
 #ifndef THX_REVISION
 #ifdef THINX_FIRMWARE_VERSION_SHORT
 #define THX_REVISION THINX_FIRMWARE_VERSION_SHORT
 #else
-#define THX_REVISION "190"
+#define THX_REVISION "192"
 #endif
 #endif
 
@@ -61,6 +61,9 @@ public:
     static String statusString;
     static String accessPointName;
     static String accessPointPassword;
+
+    static char* thinx_mqtt_url;               // up to 1k but generally something where FQDN fits
+
     static String lastWill;
 
 #ifdef __USE_WIFI_MANAGER__
@@ -117,7 +120,7 @@ public:
     const char* thinx_commit_id;              // 40 bytes + 1
     const char* thinx_firmware_version_short; // 14 bytes
     const char* thinx_firmware_version;       // max 80 bytes
-    const char* thinx_mqtt_url;               // up to 1k but generally something where FQDN fits
+
     const char* thinx_version_id;             // max 80 bytes (DEPRECATED?)
 
     bool thinx_auto_update;
@@ -135,6 +138,7 @@ public:
     void setPushConfigCallback( void (*func)(String) );
     void setFinalizeCallback( void (*func)(void) );
     void setMQTTCallback( void (*func)(String) );
+    void setMQTTBroker( char * url, int port );
     void setLastWill(String nextWill);        // disconnect MQTT and reconnect with different lastWill than default
 
     int wifi_connection_in_progress;
@@ -229,7 +233,7 @@ private:
 
     int timezone_offset = 1; // should use simpleDSTadjust
     unsigned long checkin_interval = 86400 * 1000;          // next timeout millis()
-    unsigned long checkin_time = 0;  // can be set externaly, defaults to 1h
+    unsigned long checkin_time = 86400 * 1000;  // can be set externaly, defaults to 1h
 
     unsigned long last_checkin_millis;
     unsigned long last_checkin_timestamp;
