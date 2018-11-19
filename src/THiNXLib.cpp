@@ -471,7 +471,7 @@ void THiNX::fetch_data() {
 
   buf[pos] = '\0'; // add null termination for any case...
 
-  thx_wifi_client.stop(); // ??
+  //thx_wifi_client.stop(); // ?? may cause mqtt stop
 
   Serial.printf("*TH: Received %u bytes\n", pos);
   //printStackHeap("allocating string");
